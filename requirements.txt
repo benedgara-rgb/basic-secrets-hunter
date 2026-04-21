@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CTI SSH Key Hunter — Python dependencies
+# Pinned to exact versions for reproducible builds.
+# Generated with: pip-compile requirements.in
+# ─────────────────────────────────────────────────────────────────────────────
+
+# GitHub API client
+PyGithub==2.3.0
+
+# HTTP requests (used by api_client for raw file fetching)
+requests==2.32.3
+
+# Environment variable management (.env file support)
+python-dotenv==1.0.1
+
+# ── Runtime dependencies (transitive) ──────────────────────────────────────
+certifi==2024.6.2
+charset-normalizer==3.3.2
+idna==3.7
+PyJWT==2.8.0
+pynacl==1.5.0
+urllib3==2.2.2
+Deprecated==1.2.14
+wrapt==1.16.0
+
+# ── Test dependencies ───────────────────────────────────────────────────────
+pytest==8.2.2
+pytest-cov==5.0.0
+pytest-mock==3.14.0
+
+# ── Optional: health endpoint ───────────────────────────────────────────────
+# The health endpoint uses Python's built-in http.server — no extra dep needed.

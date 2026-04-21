@@ -1,0 +1,112 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.yml — CTI SSH Key Hunter
+# Local development and testing orchestration.
+#
+# Usage:
+#   docker-compose up                    # run scanner
+#   docker-compose run --rm hunter pytest -v   # run test suite
+#   docker-compose run --rm hunter --health-only  # health endpoint only
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+  hunter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Target the runtime stage (skips builder tools in final image)
+      target: runtime
+    container_name: cti-ssh-hunter
+    image: cti-ssh-hunter:latest
+
+    environment:
+      # GitHub PAT — injected from host environment or .env file, never hardcoded
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      # Logging verbosity: DEBUG | INFO | WARNING | ERROR
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Report output directory (must match volume mount below)
+      - OUTPUT_DIR=/app/output
+      # Seconds between search result fetches (respects GitHub secondary rate limit)
+      - RATE_LIMIT_PAUSE=${RATE_LIMIT_PAUSE:-6.5}
+      # Start the /health HTTP endpoint on port 8080
+      - ENABLE_HEALTH_ENDPOINT=true
+
+    volumes:
+      # Persist scan reports on the host — survives container restarts
+      - ./output:/app/output
+      # Optional: persist logs on the host
+      - ./logs:/app/logs
+
+    ports:
+      # Expose health endpoint for external probes / Kubernetes liveness checks
+      - "8080:8080"
+
+    # Harden the container runtime
+    security_opt:
+      # Prevent privilege escalation inside the container
+      - no-new-privileges:true
+
+    # Mount root filesystem read-only; only explicitly named volumes are writable.
+    # /tmp is provided as a tmpfs (in-memory) mount for any transient writes.
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+
+    # Resource limits — prevent a runaway scan from consuming the host
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "512m"
+        reservations:
+          cpus: "0.25"
+          memory: "128m"
+
+    # Restart policy: do not restart automatically (scan is a one-shot job)
+    restart: "no"
+
+    # Override the default CMD to run a scan with explicit key types
+    # Remove or adjust to change scan behaviour
+    command: ["--key-types", "OPENSSH", "RSA", "EC", "DSA", "--enable-health"]
+
+
+  # ── Test runner service ────────────────────────────────────────────────────
+  # Runs the full pytest suite inside the container with no live network calls.
+  # Usage: docker-compose run --rm test
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: cti-ssh-hunter-test
+    image: cti-ssh-hunter:latest
+
+    environment:
+      # Tests use mocks; a dummy token prevents AuthenticationError at import time
+      - GITHUB_TOKEN=ghp_test_dummy_token_for_unit_tests
+      - LOG_LEVEL=WARNING
+      - OUTPUT_DIR=/tmp/test-output
+
+    volumes:
+      # Mount test source so tests can be edited without rebuilding the image
+      - ./tests:/app/tests:ro
+      - ./src:/app/src:ro
+
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+
+    security_opt:
+      - no-new-privileges:true
+
+    # Override the entrypoint to run pytest instead of the scanner
+    entrypoint: ["python", "-m", "pytest"]
+    command: [
+      "tests/",
+      "--verbose",
+      "--tb=short",
+      "--cov=src",
+      "--cov-report=term-missing",
+      "--cov-fail-under=80"
+    ]

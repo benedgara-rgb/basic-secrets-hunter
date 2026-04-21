@@ -1,0 +1,198 @@
+{
+  "_comment": "Sample trend analysis output — illustrates the structure of a real scan result. Values are representative examples, not live data.",
+  "generated_at": "2024-11-15T03:42:17+00:00",
+  "total_leaked_findings": 47,
+  "total_unique_repos": 38,
+  "total_unique_accounts": 22,
+  "total_keys_observed": 1284,
+  "median_keys_per_repo": 18.0,
+  "mean_sophistication_score": 3.2,
+  "batch_upload_suspected": true,
+  "batch_upload_evidence": [
+    "2024-11-12T02Z: 6 repos committed in same hour",
+    "2024-11-10T14Z: 4 repos committed in same hour",
+    "2024-11-08T22Z: 3 repos committed in same hour"
+  ],
+  "repos_active_last_30_days": 31,
+  "repos_active_last_90_days": 44,
+  "repos_abandoned": 3,
+  "repos_with_stealer_artifacts": 19,
+
+  "top_prolific_accounts": [
+    {
+      "login": "xk7f2mzq91",
+      "repo_count": 8,
+      "total_keys": 412,
+      "account_age_days": 14,
+      "age_label": "< 1 month (very suspicious)",
+      "followers": 0,
+      "public_repos": 8,
+      "locations": [],
+      "is_suspected_automation": true,
+      "automation_signals": [
+        "8 leak repos from one account",
+        "account only 14 days old",
+        "412 keys across repos"
+      ]
+    },
+    {
+      "login": "dump_collector_2024",
+      "repo_count": 6,
+      "total_keys": 289,
+      "account_age_days": 31,
+      "age_label": "< 3 months (suspicious)",
+      "followers": 1,
+      "public_repos": 6,
+      "locations": [],
+      "is_suspected_automation": true,
+      "automation_signals": [
+        "6 leak repos from one account",
+        "289 keys across repos"
+      ]
+    },
+    {
+      "login": "b4dc0ffee99",
+      "repo_count": 4,
+      "total_keys": 201,
+      "account_age_days": 7,
+      "age_label": "< 1 week  (almost certainly throwaway)",
+      "followers": 0,
+      "public_repos": 4,
+      "locations": [],
+      "is_suspected_automation": true,
+      "automation_signals": [
+        "4 leak repos from one account",
+        "account only 7 days old",
+        "201 keys across repos"
+      ]
+    }
+  ],
+
+  "suspected_automation_accounts": [
+    {
+      "login": "xk7f2mzq91",
+      "is_suspected_automation": true,
+      "automation_signals": [
+        "8 leak repos from one account",
+        "account only 14 days old",
+        "412 keys across repos"
+      ]
+    },
+    {
+      "login": "dump_collector_2024",
+      "is_suspected_automation": true,
+      "automation_signals": [
+        "6 leak repos from one account",
+        "289 keys across repos"
+      ]
+    },
+    {
+      "login": "b4dc0ffee99",
+      "is_suspected_automation": true,
+      "automation_signals": [
+        "4 leak repos from one account",
+        "account only 7 days old",
+        "201 keys across repos"
+      ]
+    }
+  ],
+
+  "repo_keyword_frequency": {
+    "logs":        18,
+    "dump":        14,
+    "stealer":     11,
+    "creds":        9,
+    "collection":   7,
+    "leak":         6,
+    "credentials":  4,
+    "grabber":      3,
+    "harvest":      2,
+    "loot":         1
+  },
+
+  "top_repo_name_words": [
+    ["logs",        21],
+    ["ssh",         19],
+    ["dump",        17],
+    ["2024",        15],
+    ["stealer",     12],
+    ["keys",        11],
+    ["creds",       10],
+    ["collection",   8],
+    ["private",      7],
+    ["leak",         6],
+    ["credentials",  5],
+    ["grabber",      4],
+    ["rsa",          4],
+    ["linux",        3],
+    ["harvest",      2],
+    ["exfil",        2],
+    ["cloud",        2],
+    ["aws",          2],
+    ["bot",          1],
+    ["panel",        1]
+  ],
+
+  "language_distribution": {
+    "Python":     38.3,
+    "Unknown":    25.5,
+    "JavaScript": 12.8,
+    "Go":          8.5,
+    "Shell":       6.4,
+    "PHP":         4.3,
+    "C++":         2.1,
+    "PowerShell":  2.1
+  },
+
+  "sophistication_distribution": {
+    "low (0-3)":    29,
+    "medium (4-6)": 14,
+    "high (7-10)":   4
+  },
+
+  "commit_hour_heatmap": {
+    "00": 3, "01": 5, "02": 8, "03": 6, "04": 4,
+    "05": 2, "06": 1, "07": 0, "08": 1, "09": 2,
+    "10": 1, "11": 0, "12": 2, "13": 1, "14": 6,
+    "15": 2, "16": 1, "17": 0, "18": 1, "19": 2,
+    "20": 3, "21": 2, "22": 7, "23": 4
+  },
+
+  "commit_dow_heatmap": {
+    "Mon": 8,
+    "Tue": 5,
+    "Wed": 6,
+    "Thu": 4,
+    "Fri": 7,
+    "Sat": 11,
+    "Sun": 13
+  },
+
+  "_temporal_note": "Weekend-heavy commits (Sat+Sun = 51% of activity) and late-night UTC clusters (02:00-04:00, 22:00-23:00) are consistent with automated stealer infrastructure or actors operating in UTC+5 to UTC+8 timezones.",
+
+  "key_volume_buckets": {
+    "1":     4,
+    "2-9":   9,
+    "10-99": 17,
+    "100+":  17
+  },
+
+  "stealer_artifact_frequency": {
+    "passwords.txt":    14,
+    "cookies.txt":      11,
+    "logins.txt":        8,
+    "cookies.json":      6,
+    "autofill.txt":      4,
+    "credit_cards.txt":  3,
+    "metamask":          2,
+    "discord_tokens":    2,
+    "system_info.txt":   1,
+    "screen.jpg":        1
+  },
+
+  "_analyst_notes": {
+    "primary_threat_actor_profile": "The majority of LEAKED findings originate from throwaway GitHub accounts (< 30 days old, 0 followers, repo count matches leak-repo count). Batch upload clustering in the 02:00-04:00 UTC window with weekend concentration suggests automated pipeline operation, likely a stealer-as-a-service or credential brokering operation. The co-location of passwords.txt, cookies.txt, and MetaMask artifacts alongside SSH keys is the fingerprint of a commodity infostealer (e.g., RedLine, Raccoon, or Vidar lineage).",
+    "sophistication_assessment": "73% of repos score LOW sophistication (raw file dumps, no structure). 9% score HIGH — these warrant closer inspection as they may represent more capable actors using GitHub as exfil infrastructure.",
+    "recommended_iocs": "Account creation dates clustering around the same week, repo names following pattern [keyword]-[year]-[random], commit timestamps matching automated pipeline windows."
+  }
+}

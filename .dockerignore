@@ -1,0 +1,66 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .dockerignore
+# Excludes files from the Docker build context.
+# Smaller context = faster docker build and reduced risk of leaking secrets.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python cache and compiled files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info
+dist/
+build/
+*.egg
+
+# Testing artefacts (never bake tests into production image)
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.pytest_cache
+
+# Development environment
+.venv/
+venv/
+env/
+.env            # CRITICAL: never bake secrets into the image
+.env.*
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CI/CD configs (not needed in runtime image)
+.github/
+*.yml
+!requirements.txt   # requirements.txt IS needed
+
+# Documentation (reduces image size)
+README.md
+DEPLOYMENT.md
+docs/
+*.md
+
+# Output directory (mounted as volume at runtime)
+output/
+logs/
+
+# Sample data
+sample_output/
+
+# Docker files themselves (prevent recursive inclusion)
+Dockerfile*
+docker-compose*.yml

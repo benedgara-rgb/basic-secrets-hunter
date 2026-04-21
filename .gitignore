@@ -1,0 +1,29 @@
+# Secrets — NEVER commit
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Test artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Output — mount as volume; don't commit scan results
+output/
+logs/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+.env
