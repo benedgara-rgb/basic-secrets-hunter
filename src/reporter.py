@@ -17,43 +17,12 @@ from __future__ import annotations
 
 import csv
 import dataclasses
-import hashlib
 import json
 import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
-
-def _pseudonymise_email(email: Optional[str]) -> Optional[str]:
-    """
-    Return a SHA-256 hex digest of an email address — a stable pseudonym
-    usable for correlation across findings without storing the raw PII.
-
-    GDPR calls this "pseudonymisation" (distinct from anonymisation, because
-    the CSV still contains the raw value during active disclosure work).
-    The hash of the same email always produces the same output, so analysts
-    can still cluster findings by developer without exposing identities if
-    the JSON report is later leaked, shared, or subpoenaed.
-
-    Returns None if email is None or empty so downstream readers can
-    distinguish "no data" from "hashed data".
-    """
-    if not email:
-        return None
-    # Lowercase + strip before hashing so trivially different casings/spacing
-    # produce identical fingerprints — this maximises correlation power.
-    normalised = email.strip().lower()
-    return hashlib.sha256(normalised.encode("utf-8")).hexdigest()
-
-
-def _pseudonymise_name(name: Optional[str]) -> Optional[str]:
-    """SHA-256 hash of a commit author name — weaker PII but still identifying."""
-    if not name:
-        return None
-    normalised = name.strip().lower()
-    return hashlib.sha256(normalised.encode("utf-8")).hexdigest()
 
 from .classifier import ClassifiedFinding, Classification
 from .trend_analyzer import TrendReport, AccountProfile
@@ -136,16 +105,9 @@ class Reporter:
                 "repo_url":              f.repo_url,
                 "file_path":             f.file_path,
                 "commit_sha":            f.commit_sha,
-                # PSEUDONYMISED identity fields — raw values live only in the
-                # disclosure CSV, which should be treated as short-lived
-                # working material and deleted after notifications are sent.
-                # The fingerprints below allow correlating the same developer
-                # across findings without exposing the underlying identity.
-                "author_name_fingerprint":  _pseudonymise_name(f.author_name),
-                "author_email_fingerprint": _pseudonymise_email(f.author_email),
-                # owner_login is already public on GitHub, so it stays raw —
-                # pseudonymising it would destroy useful research signal
-                # without reducing PII exposure (it is not private to begin with)
+                "author_name":           f.author_name,
+                # Email appears only in this JSON and the disclosure CSV
+                "author_email":          f.author_email,
                 "commit_date":           f.commit_date,
                 "secret_count":          f.key_count,
                 # Each detected secret: type, category, confidence, redacted sample
@@ -180,14 +142,6 @@ class Reporter:
         output = {
             "metadata": {
                 "generated_at": datetime.now(timezone.utc).isoformat(),
-                # Privacy posture note embedded in the report itself
-                "privacy_posture": (
-                    "Author emails and names are pseudonymised (SHA-256) in "
-                    "this file. Raw values appear only in the disclosure CSV, "
-                    "which should be deleted after disclosure notifications "
-                    "are sent. Cross-reference findings to the CSV via the "
-                    "author_email_fingerprint field."
-                ),
                 "total_findings": len(findings),
                 "leaked_count": sum(
                     1 for f in findings if f.classification == Classification.LEAKED
@@ -233,11 +187,7 @@ class Reporter:
         ]
 
         fieldnames = [
-            # Raw email + its fingerprint appear together here so analysts
-            # can join back to the findings JSON (which only has the hash).
-            "author_email", "author_email_fingerprint",
-            "author_name",  "author_name_fingerprint",
-            "repo_url", "file_path",
+            "author_email", "author_name", "repo_url", "file_path",
             "commit_sha", "commit_date", "classification",
             "secret_types", "secret_categories", "secret_count",
             "secret_sha256_fingerprints",
@@ -249,9 +199,7 @@ class Reporter:
             for f in targets:
                 writer.writerow({
                     "author_email":                f.author_email,
-                    "author_email_fingerprint":    _pseudonymise_email(f.author_email),
                     "author_name":                 f.author_name or "",
-                    "author_name_fingerprint":     _pseudonymise_name(f.author_name),
                     "repo_url":                    f.repo_url,
                     "file_path":                   f.file_path,
                     "commit_sha":                  f.commit_sha or "",

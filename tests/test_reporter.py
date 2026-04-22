@@ -143,13 +143,9 @@ class TestFindingsJSON:
         paths = reporter.write_all(findings, _empty_trend_report())
         data = json.loads(Path(paths["findings_json"]).read_text())
         record = data["findings"][0]
-        # After the pseudonymization patch, raw author_name and author_email
-        # no longer appear in the JSON — they are replaced by SHA-256
-        # fingerprints.  Raw values live only in the disclosure CSV.
         required = [
             "classification", "repo_url", "file_path", "commit_sha",
-            "author_name_fingerprint", "author_email_fingerprint",
-            "commit_date",
+            "author_name", "author_email", "commit_date",
         ]
         for field in required:
             assert field in record, f"Missing field: {field}"

@@ -244,17 +244,28 @@ class TestCodeSearch:
     @patch("src.api_client.Github")
     @patch("src.api_client.time.sleep")
     def test_bad_item_skipped_gracefully(self, mock_sleep, MockGithub):
-        """An item that raises during hydration should be skipped, not crash."""
+        """An item that raises during hydration should be skipped, not crash.
+
+        Note: the new api_client reads repo.owner directly (no .get() call),
+        so we trigger hydration failure via a different path — making
+        access to repo.full_name raise. This simulates a malformed search
+        response where the basic repo metadata is broken.
+        """
         gh = MockGithub.return_value
         gh.get_user.return_value = _mock_user()
         gh.get_rate_limit.return_value = _mock_rate_limit()
 
-        bad_item  = MagicMock()
-        bad_item.repository.owner.get.side_effect = Exception("API error")
+        # Bad item: accessing .full_name raises during hydration.
+        # The new SearchHit constructor reads repo.full_name during __init__,
+        # so an exception here propagates and the item gets skipped.
+        bad_item = MagicMock()
+        bad_repo = MagicMock()
+        type(bad_repo).full_name = PropertyMock(side_effect=Exception("API error"))
+        bad_item.repository = bad_repo
         bad_item.html_url = "https://github.com/x/y/blob/main/k"
 
+        # Good item: hydrates cleanly
         good_repo = _mock_repo()
-        good_repo.owner.get = MagicMock(return_value=_mock_user())
         good_repo.get_commits = MagicMock(return_value=[_mock_commit()])
         good_item = _mock_code_item(repo=good_repo)
 
@@ -263,7 +274,7 @@ class TestCodeSearch:
         client = GitHubClient(token="ghp_test")
         hits = list(client.search_code('"BEGIN RSA"', max_results=10))
         # bad item was skipped; good item was returned
-        assert len(hits) == 1
+        assert len(hits) == 1, f"Expected 1 hit, got {len(hits)}"
 
 
 # ── File content fetching ─────────────────────────────────────────────────────

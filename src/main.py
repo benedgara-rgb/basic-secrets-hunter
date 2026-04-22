@@ -68,62 +68,16 @@ from .target_resolver import (
 # ── Logging setup ─────────────────────────────────────────────────────────────
 
 def _configure_logging(level: str = "INFO") -> None:
-    """
-    Configure logging to write to BOTH stderr (live terminal output) and
-    a timestamped file in the logs directory (persistent audit trail).
-
-    Log directory is controlled by the LOG_DIR env var, defaulting to
-    /app/logs in Docker containers and ./logs otherwise.
-    """
-    from datetime import datetime, timezone
-    from pathlib import Path
-
     numeric = getattr(logging, level.upper(), logging.INFO)
-
-    # Resolve log directory — env var wins, fallback to /app/logs or ./logs
-    log_dir = Path(os.getenv("LOG_DIR",
-                             "/app/logs" if os.path.isdir("/app/logs") else "./logs"))
-
-    # Create the directory if it does not exist; swallow errors so logging
-    # to file is best-effort.  Terminal output always works.
-    file_handler = None
-    try:
-        log_dir.mkdir(parents=True, exist_ok=True)
-        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        log_path = log_dir / f"scan_{ts}.log"
-        file_handler = logging.FileHandler(log_path, encoding="utf-8")
-        file_handler.setLevel(numeric)
-        file_handler.setFormatter(logging.Formatter(
-            "%(asctime)s [%(levelname)-8s] %(name)s — %(message)s",
-            datefmt="%Y-%m-%dT%H:%M:%SZ",
-        ))
-    except Exception as exc:
-        # Log to stderr only if file logging cannot be set up (e.g. readonly fs)
-        print(f"[WARN] Could not set up log file at {log_dir}: {exc}",
-              file=sys.stderr)
-
-    # Stream handler — live terminal output
-    stream_handler = logging.StreamHandler(sys.stderr)
-    stream_handler.setLevel(numeric)
-    stream_handler.setFormatter(logging.Formatter(
-        "%(asctime)s [%(levelname)-8s] %(name)s — %(message)s",
+    logging.basicConfig(
+        level=numeric,
+        format="%(asctime)s [%(levelname)-8s] %(name)s — %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%SZ",
-    ))
-
-    # Wire both handlers to the root logger
-    handlers = [stream_handler]
-    if file_handler is not None:
-        handlers.append(file_handler)
-
-    # Use force=True to override any prior basicConfig() calls from imports
-    logging.basicConfig(level=numeric, handlers=handlers, force=True)
-
+        stream=sys.stderr,
+    )
     # Quieten noisy third-party loggers
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("github").setLevel(logging.WARNING)
-
-    if file_handler is not None:
-        logging.getLogger(__name__).info("Log file: %s", log_path)
 
 
 logger = logging.getLogger(__name__)
@@ -362,11 +316,7 @@ def run_scan(args: argparse.Namespace) -> int:
         if _STATE.shutdown_requested.is_set():
             break
 
-        logger.info("═" * 60)
         logger.info("Query: %s", query)
-        logger.info("═" * 60)
-        import time as _time
-        _query_start = _time.monotonic()
 
         try:
             for hit in client.search_code(query, max_results=args.max_results):
@@ -375,20 +325,7 @@ def run_scan(args: argparse.Namespace) -> int:
                     break
 
                 # Fetch raw file content; content is discarded after key detection
-                logger.debug("    fetching content: %s", hit.file_url)
-                import time as _time
-                t_fetch = _time.monotonic()
                 content = client.fetch_file_content(hit)
-                fetch_elapsed = _time.monotonic() - t_fetch
-                logger.debug(
-                    "    fetched %d bytes in %.2fs",
-                    len(content) if content else 0, fetch_elapsed,
-                )
-                if fetch_elapsed > 5.0:
-                    logger.warning(
-                        "⚠  slow file fetch: %.2fs for %s",
-                        fetch_elapsed, hit.file_url,
-                    )
                 if content is None:
                     logger.debug("No content for %s — skipping.", hit.file_url)
                     continue
@@ -430,39 +367,13 @@ def run_scan(args: argparse.Namespace) -> int:
             # Continue to the next query rather than aborting the entire run
             continue
 
-        _query_elapsed = _time.monotonic() - _query_start
-        logger.info(
-            "Query done in %.1fs → %d findings so far",
-            _query_elapsed, len(_STATE.findings),
-        )
-
     logger.info(
         "Scan complete.  %d findings collected (%d unique key hashes).",
         len(_STATE.findings), len(seen_hashes),
     )
 
     if not _STATE.findings:
-        # Still write a minimal report so the operator has a record that
-        # the scan ran, what was searched, and when — even with zero hits.
-        # Empty output directories after a scan are confusing; an empty
-        # report file is self-documenting.
-        logger.warning("No findings to report — writing empty report for audit trail.")
-        trend_report = analyzer.analyse([])
-        report_paths = reporter.write_all([], trend_report)
-        print("\n─────────────────────────────────────────────")
-        print("  CTI SSH Hunter — Scan Complete (Zero Findings)")
-        print(f"  Target: {scope.display_label}")
-        print("─────────────────────────────────────────────")
-        for label, path in report_paths.items():
-            print(f"  {label:<22} → {path}")
-        print()
-        print("  No secrets detected in the scanned scope.")
-        print("  This may indicate:")
-        print("    • The target genuinely has no exposed secrets (good!)")
-        print("    • The target has minimal public code")
-        print("    • Rate limits interrupted the scan before completion")
-        print("  Check the scan logs above for WARN/ERROR lines.")
-        print("─────────────────────────────────────────────\n")
+        logger.warning("No findings to report.")
         return 0
 
     # ── Trend analysis ─────────────────────────────────────────────────────

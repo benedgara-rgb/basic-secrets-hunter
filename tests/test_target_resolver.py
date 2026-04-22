@@ -202,19 +202,25 @@ class TestBuildQueries:
     def test_org_scope_appended_to_queries(self):
         _build_queries = self._get_build_queries()
         scope = parse_github_url("dynatrace")
-        queries = _build_queries(["RSA", "OPENSSH"], scope=scope)
+        # Use the new catalogue IDs (RSA_PRIVATE_KEY not RSA) because the
+        # detector catalogue was expanded from 6 key types to 30 secret IDs
+        queries = _build_queries(
+            ["RSA_PRIVATE_KEY", "OPENSSH_PRIVATE_KEY"], scope=scope
+        )
         assert all("org:dynatrace" in q for q in queries)
 
     def test_repo_scope_appended_to_queries(self):
         _build_queries = self._get_build_queries()
         scope = parse_github_url("dynatrace/dynatrace-operator")
-        queries = _build_queries(["RSA"], scope=scope)
-        assert queries[0] == '"BEGIN RSA PRIVATE KEY" repo:dynatrace/dynatrace-operator'
+        queries = _build_queries(["RSA_PRIVATE_KEY"], scope=scope)
+        assert queries[0] == (
+            '"BEGIN RSA PRIVATE KEY" repo:dynatrace/dynatrace-operator'
+        )
 
     def test_global_scope_no_qualifier(self):
         _build_queries = self._get_build_queries()
         scope = parse_github_url("")
-        queries = _build_queries(["RSA"], scope=scope)
+        queries = _build_queries(["RSA_PRIVATE_KEY"], scope=scope)
         assert queries[0] == '"BEGIN RSA PRIVATE KEY"'
         assert "org:" not in queries[0]
         assert "user:" not in queries[0]
@@ -223,19 +229,31 @@ class TestBuildQueries:
     def test_none_scope_no_qualifier(self):
         """No scope (None) behaves identically to global."""
         _build_queries = self._get_build_queries()
-        queries = _build_queries(["EC"], scope=None)
+        queries = _build_queries(["EC_PRIVATE_KEY"], scope=None)
         assert queries[0] == '"BEGIN EC PRIVATE KEY"'
 
     def test_all_key_types_get_qualifier(self):
         _build_queries = self._get_build_queries()
         scope = parse_github_url("microsoft")
-        queries = _build_queries(["OPENSSH", "RSA", "EC", "DSA", "PKCS8"], scope=scope)
+        # All five private-key IDs from the expanded catalogue
+        queries = _build_queries(
+            [
+                "OPENSSH_PRIVATE_KEY",
+                "RSA_PRIVATE_KEY",
+                "EC_PRIVATE_KEY",
+                "DSA_PRIVATE_KEY",
+                "PKCS8_PRIVATE_KEY",
+            ],
+            scope=scope,
+        )
         assert len(queries) == 5
         assert all("org:microsoft" in q for q in queries)
 
     def test_unknown_key_type_skipped(self):
         _build_queries = self._get_build_queries()
-        queries = _build_queries(["RSA", "INVALID_TYPE"], scope=None)
+        queries = _build_queries(
+            ["RSA_PRIVATE_KEY", "NONEXISTENT_SECRET_TYPE"], scope=None
+        )
         assert len(queries) == 1
         assert '"BEGIN RSA PRIVATE KEY"' in queries[0]
 
